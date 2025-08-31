@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Safety Signal Browser</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
+            color: #1f2937;
+        }
+        .filter-select, .input-field, .button {
+            transition: all 0.2s ease-in-out;
+        }
+        .filter-select:focus, .input-field:focus {
+            box-shadow: 0 0 0 2px #3b82f6;
+            border-color: #3b82f6;
+            outline: none;
+        }
+        .message-box {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-900">Product Safety Signal Browser</h1>
+            <p class="text-gray-600 mt-2">Filter records or add new ones to the shared database.</p>
+            <div id="user-info" class="text-sm text-gray-500 mt-4">Loading user information...</div>
+        </header>
+
+        <!-- Message Box for user feedback -->
+        <div id="message-container" class="message-box"></div>
+
+        <!-- Add New Record Section -->
+        <div id="add-record-section" class="bg-white p-6 rounded-lg shadow-md mb-8">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-3">Add New Record</h2>
+            <form id="add-record-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                <div class="xl:col-span-1">
+                    <label for="new-product" class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                    <input type="text" id="new-product" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="xl:col-span-1">
+                    <label for="new-substance" class="block text-sm font-medium text-gray-700 mb-1">Active Substance</label>
+                    <input type="text" id="new-substance" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="xl:col-span-1">
+                    <label for="new-signal" class="block text-sm font-medium text-gray-700 mb-1">Safety Signal</label>
+                    <input type="text" id="new-signal" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="xl:col-span-1">
+                    <label for="new-category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <input type="text" id="new-category" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="xl:col-span-1">
+                    <label for="new-outcome" class="block text-sm font-medium text-gray-700 mb-1">Outcome</label>
+                    <input type="text" id="new-outcome" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                </div>
+                <div class="xl:col-span-1 flex items-end">
+                    <button type="submit" id="add-btn" class="button w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition">
+                        Add Record
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Data Table Section -->
+        <div id="table-section" class="table-container bg-white p-6 rounded-lg shadow-md">
+            <h2 class="text-2xl font-semibold mb-6 text-gray-800 border-b pb-3">Filter Records</h2>
+            
+            <!-- Filter Controls -->
+            <div id="filters" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6 items-end">
+                <div>
+                    <label for="filter-product" class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
+                    <select id="filter-product" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white filter-select">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="filter-substance" class="block text-sm font-medium text-gray-700 mb-1">Active Substance</label>
+                    <select id="filter-substance" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white filter-select">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="filter-signal" class="block text-sm font-medium text-gray-700 mb-1">Safety Signal</label>
+                    <select id="filter-signal" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white filter-select">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="filter-category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
+                    <select id="filter-category" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white filter-select">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                 <div>
+                    <label for="filter-outcome" class="block text-sm font-medium text-gray-700 mb-1">Outcome</label>
+                    <select id="filter-outcome" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 bg-white filter-select">
+                        <option value="">All</option>
+                    </select>
+                </div>
+                <div>
+                    <button id="clear-filters-btn" class="w-full inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition">
+                        Clear Filters
+                    </button>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Active Substance</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Potential Safety Signal</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+                            <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Outcome</th>
+                        </tr>
+                    </thead>
+                    <tbody id="data-table" class="bg-white divide-y divide-gray-200">
+                        <!-- Rows will be inserted here by JavaScript -->
+                    </tbody>
+                </table>
+            </div>
+            <div id="loading-spinner" class="mt-4 text-center hidden">
+                <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, onSnapshot, getDocs, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Firebase configuration and app ID provided by the environment
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        let currentUserId = null;
+
+        // --- DOM ELEMENTS ---
+        const dataTable = document.getElementById('data-table');
+        const userDisplay = document.getElementById('user-info');
+        const addRecordForm = document.getElementById('add-record-form');
+        const addRecordBtn = document.getElementById('add-btn');
+        const messageContainer = document.getElementById('message-container');
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const filters = {
+            product: document.getElementById('filter-product'),
+            substance: document.getElementById('filter-substance'),
+            signal: document.getElementById('filter-signal'),
+            category: document.getElementById('filter-category'),
+            outcome: document.getElementById('filter-outcome')
+        };
+        const clearFiltersBtn = document.getElementById('clear-filters-btn');
+
+        let allRecords = [];
+
+        /**
+         * Displays a temporary message box for user feedback.
+         * @param {string} message - The message to display.
+         * @param {string} type - The type of message (e.g., 'success', 'error').
+         */
+        function showMessage(message, type = 'success') {
+            const box = document.createElement('div');
+            box.textContent = message;
+            box.className = `p-4 rounded-md shadow-lg text-sm font-medium transition-all duration-300 transform translate-x-full opacity-0`;
+            
+            if (type === 'success') {
+                box.classList.add('bg-green-100', 'text-green-800');
+            } else if (type === 'error') {
+                box.classList.add('bg-red-100', 'text-red-800');
+            }
+
+            messageContainer.appendChild(box);
+
+            // Animate in
+            setTimeout(() => {
+                box.classList.remove('translate-x-full', 'opacity-0');
+                box.classList.add('translate-x-0', 'opacity-100');
+            }, 50);
+
+            // Animate out and remove
+            setTimeout(() => {
+                box.classList.remove('translate-x-0', 'opacity-100');
+                box.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => {
+                    messageContainer.removeChild(box);
+                }, 300);
+            }, 3000);
+        }
+
+        /**
+         * Renders the data into the table.
+         * @param {object[]} data - The array of data objects to render.
+         */
+        function renderTable(data) {
+            dataTable.innerHTML = '';
+            if (data.length === 0) {
+                dataTable.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-gray-500">No records match the current filters.</td></tr>`;
+                return;
+            }
+            data.forEach(item => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${item.productName}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.activeSubstance}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.signal}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.category}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${item.outcome}</td>
+                `;
+                dataTable.appendChild(row);
+            });
+        }
+
+        /**
+         * Populates a select dropdown with unique, sorted options from the data.
+         * @param {HTMLElement} selectElement - The select element to populate.
+         * @param {string[]} options - An array of strings for the options.
+         */
+        function populateDropdown(selectElement, options) {
+            selectElement.innerHTML = '<option value="">All</option>'; // Reset dropdown
+            const uniqueOptions = [...new Set(options)].sort();
+            uniqueOptions.forEach(optionText => {
+                if (optionText) {
+                    const option = document.createElement('option');
+                    option.value = optionText;
+                    option.textContent = optionText;
+                    selectElement.appendChild(option);
+                }
+            });
+        }
+        
+        /**
+         * Filters the table data based on the selected dropdown values.
+         */
+        function applyFilters() {
+            const selectedProduct = filters.product.value;
+            const selectedSubstance = filters.substance.value;
+            const selectedSignal = filters.signal.value;
+            const selectedCategory = filters.category.value;
+            const selectedOutcome = filters.outcome.value;
+
+            const filteredData = allRecords.filter(item => {
+                const productMatch = !selectedProduct || item.productName === selectedProduct;
+                const substanceMatch = !selectedSubstance || item.activeSubstance === selectedSubstance;
+                const signalMatch = !selectedSignal || item.signal === selectedSignal;
+                const categoryMatch = !selectedCategory || item.category === selectedCategory;
+                const outcomeMatch = !selectedOutcome || item.outcome === selectedOutcome;
+                return productMatch && substanceMatch && signalMatch && categoryMatch && outcomeMatch;
+            });
+
+            renderTable(filteredData);
+        }
+
+        /**
+         * Resets all filters to their default state.
+         */
+        function clearFilters() {
+            filters.product.value = "";
+            filters.substance.value = "";
+            filters.signal.value = "";
+            filters.category.value = "";
+            filters.outcome.value = "";
+            applyFilters();
+        }
+        
+        /**
+         * Sets up a real-time listener for the Firestore collection.
+         */
+        function setupFirestoreListener() {
+            if (!currentUserId) {
+                console.error("User not authenticated. Cannot set up Firestore listener.");
+                return;
+            }
+
+            const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'safety_signals');
+            
+            loadingSpinner.classList.remove('hidden');
+
+            // Listen for real-time updates
+            onSnapshot(collectionRef, (snapshot) => {
+                allRecords = snapshot.docs.map(doc => doc.data());
+
+                // Update dropdowns with fresh data
+                populateDropdown(filters.product, allRecords.map(item => item.productName));
+                populateDropdown(filters.substance, allRecords.map(item => item.activeSubstance));
+                populateDropdown(filters.signal, allRecords.map(item => item.signal));
+                populateDropdown(filters.category, allRecords.map(item => item.category));
+                populateDropdown(filters.outcome, allRecords.map(item => item.outcome));
+
+                // Re-apply filters with the new data
+                applyFilters();
+                loadingSpinner.classList.add('hidden');
+            }, (error) => {
+                console.error("Error fetching documents: ", error);
+                showMessage("Failed to load records. Please try again later.", 'error');
+                loadingSpinner.classList.add('hidden');
+            });
+        }
+
+        // Add a new record to Firestore
+        addRecordForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const newRecord = {
+                productName: document.getElementById('new-product').value,
+                activeSubstance: document.getElementById('new-substance').value,
+                signal: document.getElementById('new-signal').value,
+                category: document.getElementById('new-category').value,
+                outcome: document.getElementById('new-outcome').value,
+                createdAt: new Date()
+            };
+
+            addRecordBtn.disabled = true;
+            addRecordBtn.textContent = 'Adding...';
+
+            try {
+                const collectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'safety_signals');
+                await addDoc(collectionRef, newRecord);
+                addRecordForm.reset();
+                showMessage("New record added successfully!");
+            } catch (e) {
+                console.error("Error adding document: ", e);
+                showMessage("Failed to add record. Please try again.", 'error');
+            } finally {
+                addRecordBtn.disabled = false;
+                addRecordBtn.textContent = 'Add Record';
+            }
+        });
+
+        // Event listeners for filters
+        Object.values(filters).forEach(select => {
+            select.addEventListener('change', applyFilters);
+        });
+        clearFiltersBtn.addEventListener('click', clearFilters);
+
+        // --- AUTHENTICATION & INITIALIZATION ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                userDisplay.textContent = `Authenticated as User ID: ${currentUserId}`;
+                setupFirestoreListener();
+            } else {
+                try {
+                    if (initialAuthToken) {
+                        await signInWithCustomToken(auth, initialAuthToken);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                } catch (error) {
+                    console.error("Authentication failed: ", error);
+                    userDisplay.textContent = "Authentication failed.";
+                    showMessage("Authentication failed. Please check the console for details.", 'error');
+                }
+            }
+        });
+        
+    </script>
+</body>
+</html>
