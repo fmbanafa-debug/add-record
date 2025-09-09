@@ -1,524 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Safety Signal Browser</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f7fafc;
-            color: #2d3748;
-        }
-        .input-field, .filter-select, .button {
-            transition: all 0.2s ease-in-out;
-        }
-        .input-field:focus, .filter-select:focus {
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
-            border-color: #3b82f6;
-            outline: none;
-        }
-        .message-box {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 1000;
-            max-width: 20rem;
-        }
-        .sortable {
-            cursor: pointer;
-            user-select: none;
-        }
-        .sortable:hover {
-            color: #1a202c;
-            background-color: #edf2f7;
-        }
-        .table-container {
-            max-height: 500px;
-            overflow-y: auto;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Safety Update 2025 Database</title>
+  <!-- Loading Tailwind CSS for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Loading prop-types for React -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <!-- Loading React and ReactDOM -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <!-- Loading Babel for JSX transformation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <!-- Loading PapaParse for CSV parsing -->
+  <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+  <!-- Loading Recharts for visualizations -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.15.0/Recharts.min.js"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
-    <div class="container mx-auto px-4 py-6 sm:px-6 lg:px-8">
-        <header class="mb-6 text-center">
-            <h1 class="text-2xl sm:text-3xl font-bold text-gray-900">Safety Signal Dashboard</h1>
-            <p class="text-gray-600 mt-2 text-sm sm:text-base">Manage and analyze safety signal records with filtering and editing tools.</p>
-            <div id="user-info" class="text-sm text-gray-500 mt-3">Authenticating...</div>
-        </header>
+<body class="bg-gray-100">
+  <div id="root" class="container mx-auto p-4"></div>
 
-        <!-- Message Box -->
-        <div id="message-container" class="message-box"></div>
+  <script type="text/babel">
+    // Defining the main App component
+    const App = () => {
+      // Managing state for data, search, filters, and sorting
+      const [data, setData] = React.useState([]);
+      const [searchTerm, setSearchTerm] = React.useState('');
+      const [reviewFilter, setReviewFilter] = React.useState('');
+      const [reasonFilter, setReasonFilter] = React.useState('');
+      const [sortConfig, setSortConfig] = React.useState({ key: '', direction: '' });
+      const [loading, setLoading] = React.useState(true);
 
-        <!-- Add/Update Record -->
-        <section class="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-6">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Add or Update Record</h2>
-            <form id="add-record-form" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                <input type="hidden" id="doc-id">
-                <div>
-                    <label for="new-product" class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                    <input type="text" id="new-product" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="new-substance" class="block text-sm font-medium text-gray-700 mb-1">Active Substance</label>
-                    <input type="text" id="new-substance" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="new-signal" class="block text-sm font-medium text-gray-700 mb-1">Safety Signal</label>
-                    <input type="text" id="new-signal" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="new-category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <input type="text" id="new-category" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div>
-                    <label for="new-outcome" class="block text-sm font-medium text-gray-700 mb-1">Outcome</label>
-                    <input type="text" id="new-outcome" required class="input-field w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                </div>
-                <div class="flex items-end gap-2">
-                    <button type="submit" id="add-btn" class="button w-full sm:w-auto px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
-                        Add Record
-                    </button>
-                    <button type="button" id="cancel-btn" class="hidden button w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                        Cancel
-                    </button>
-                </div>
-            </form>
-        </section>
+      // Loading and parsing CSV data
+      React.useEffect(() => {
+        Papa.parse(loadFileData("Safety Update 2025 1.csv"), {
+          header: true,
+          skipEmptyLines: true,
+          transformHeader: (header) => header.trim().replace(/^"|"$/g, ''),
+          transform: (value, header) => {
+            let cleaned = value.trim().replace(/^"|"$/g, '');
+            return cleaned;
+          },
+          complete: (results) => {
+            const cleanedData = results.data.map(row => ({
+              "Product Name": row["Product Name"] || "",
+              "Active Substance": row["Active Substance"] || "",
+              "Potential Safety Signal": row["Potential Safety Signal"] || "",
+              "Reason to be Reviewed Category": row["Reason to be Reviewed Category"] || "",
+              "Review outcome": row["Review outcome"] || ""
+            }));
+            setData(cleanedData);
+            setLoading(false);
+          },
+          error: (err) => {
+            console.error('Error parsing CSV:', err);
+            setLoading(false);
+          }
+        });
+      }, []);
 
-        <!-- Data Table -->
-        <section class="bg-white p-4 sm:p-6 rounded-lg shadow-md">
-            <h2 class="text-xl font-semibold text-gray-800 mb-4">Records</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 mb-6">
-                <div>
-                    <label for="filter-product" class="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                    <select id="filter-product" class="filter-select w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-substance" class="block text-sm font-medium text-gray-700 mb-1">Active Substance</label>
-                    <select id="filter-substance" class="filter-select w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-signal" class="block text-sm font-medium text-gray-700 mb-1">Safety Signal</label>
-                    <select id="filter-signal" class="filter-select w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-category" class="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                    <select id="filter-category" class="filter-select w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div>
-                    <label for="filter-outcome" class="block text-sm font-medium text-gray-700 mb-1">Outcome</label>
-                    <select id="filter-outcome" class="filter-select w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
-                        <option value="">All</option>
-                    </select>
-                </div>
-                <div class="flex items-end gap-2">
-                    <button id="clear-filters-btn" class="button w-full sm:w-auto px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2">
-                        Clear Filters
-                    </button>
-                    <button id="export-btn" class="button w-full sm:w-auto px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
-                        Export to CSV
-                    </button>
-                </div>
+      // Handling sorting logic
+      const handleSort = (key) => {
+        let direction = 'asc';
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+          direction = 'desc';
+        }
+        setSortConfig({ key, direction });
+      };
+
+      // Sorting data based on sortConfig
+      const sortedData = React.useMemo(() => {
+        if (!sortConfig.key) return data;
+        return [...data].sort((a, b) => {
+          const aValue = a[sortConfig.key] || '';
+          const bValue = b[sortConfig.key] || '';
+          if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+          if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+          return 0;
+        });
+      }, [data, sortConfig]);
+
+      // Filtering data based on search and filter inputs
+      const filteredData = sortedData.filter(row => {
+        const matchesSearch = row["Product Name"].toLowerCase().includes(searchTerm.toLowerCase()) ||
+                             row["Active Substance"].toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesReview = reviewFilter ? row["Review outcome"] === reviewFilter : true;
+        const matchesReason = reasonFilter ? row["Reason to be Reviewed Category"] === reasonFilter : true;
+        return matchesSearch && matchesReview && matchesReason;
+      });
+
+      // Preparing data for visualizations
+      const reviewOutcomeCounts = data.reduce((acc, row) => {
+        const outcome = row["Review outcome"] || "Unknown";
+        acc[outcome] = (acc[outcome] || 0) + 1;
+        return acc;
+      }, {});
+      const reviewOutcomeData = Object.entries(reviewOutcomeCounts).map(([name, value]) => ({ name, value }));
+
+      const reasonCategoryCounts = data.reduce((acc, row) => {
+        const category = row["Reason to be Reviewed Category"] || "Unknown";
+        acc[category] = (acc[category] || 0) + 1;
+        return acc;
+      }, {});
+      const reasonCategoryData = Object.entries(reasonCategoryCounts).map(([name, value]) => ({ name, value }));
+
+      // Rendering loading message if data is not yet loaded
+      if (loading) {
+        return <div className="text-center text-xl mt-10">Loading data...</div>;
+      }
+
+      // Rendering the main interface
+      return (
+        <div className="bg-white p-6 rounded-lg shadow-lg">
+          <h1 className="text-3xl font-bold mb-4 text-center">Safety Update 2025 Database</h1>
+
+          {/* Adding search and filter controls */}
+          <div className="mb-6 flex flex-col md:flex-row gap-4">
+            <input
+              type="text"
+              placeholder="Search by Product Name or Active Substance"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="p-2 border rounded w-full md:w-1/3"
+            />
+            <select
+              value={reviewFilter}
+              onChange={(e) => setReviewFilter(e.target.value)}
+              className="p-2 border rounded w-full md:w-1/3"
+            >
+              <option value="">Filter by Review Outcome</option>
+              {[...new Set(data.map(row => row["Review outcome"]))].map(outcome => (
+                <option key={outcome} value={outcome}>{outcome}</option>
+              ))}
+            </select>
+            <select
+              value={reasonFilter}
+              onChange={(e) => setReasonFilter(e.target.value)}
+              className="p-2 border rounded w-full md:w-1/3"
+            >
+              <option value="">Filter by Reason Category</option>
+              {[...new Set(data.map(row => row["Reason to be Reviewed Category"]))].map(category => (
+                <option key={category} value={category}>{category}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Displaying interesting fact */}
+          <div className="mb-6 p-4 bg-blue-100 rounded-lg">
+            <h2 className="text-xl font-semibold">Interesting Fact</h2>
+            <p>
+              The most common safety signal is <strong>"Propylene glycol safety during pregnancy and in neonates"</strong>,
+              appearing in {reasonCategoryCounts["Safety in special population"]} entries, highlighting significant concerns
+              about the use of certain medications in pregnant women and neonates.
+            </p>
+          </div>
+
+          {/* Displaying visualizations */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Review Outcome Distribution</h2>
+              <Recharts.ResponsiveContainer width="100%" height={300}>
+                <Recharts.BarChart data={reviewOutcomeData}>
+                  <Recharts.CartesianGrid strokeDasharray="3 3" />
+                  <Recharts.XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={12} />
+                  <Recharts.YAxis fontSize={12} />
+                  <Recharts.Tooltip />
+                  <Recharts.Legend />
+                  <Recharts.Bar dataKey="value" fill="#3B82F6" />
+                </Recharts.BarChart>
+              </Recharts.ResponsiveContainer>
             </div>
-            <div class="table-container overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                    <thead class="bg-gray-50 sticky top-0 z-10">
-                        <tr>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sortable" data-sort="productName">Product Name</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sortable" data-sort="activeSubstance">Active Substance</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sortable" data-sort="signal">Safety Signal</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sortable" data-sort="category">Category</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider sortable" data-sort="outcome">Outcome</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Log</th>
-                            <th scope="col" class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody id="data-table" class="bg-white divide-y divide-gray-200">
-                        <!-- Rows will be populated dynamically from embedded data -->
-                    </tbody>
-                </table>
+            <div>
+              <h2 className="text-xl font-semibold mb-2">Reason Category Distribution</h2>
+              <Recharts.ResponsiveContainer width="100%" height={300}>
+                <Recharts.BarChart data={reasonCategoryData}>
+                  <Recharts.CartesianGrid strokeDasharray="3 3" />
+                  <Recharts.XAxis dataKey="name" angle={-45} textAnchor="end" fontSize={12} />
+                  <Recharts.YAxis fontSize={12} />
+                  <Recharts.Tooltip />
+                  <Recharts.Legend />
+                  <Recharts.Bar dataKey="value" fill="#10B981" />
+                </Recharts.BarChart>
+              </Recharts.ResponsiveContainer>
             </div>
-            <div id="loading-spinner" class="mt-4 text-center hidden">
-                <svg class="animate-spin h-8 w-8 text-blue-600 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-            </div>
-        </section>
-    </div>
+          </div>
 
-    <script type="module">
-        // Embedded static database
-        const staticDatabase = [
-            { productName: "TYLENOL", activeSubstance: "ACETAMINOPHEN/PARACETAMOL", signal: "Hemolytic anemia with G6PD deficiency", category: "Genomic variation", outcome: "Ongoing evaluation" },
-            { productName: "ASPIRIN", activeSubstance: "ACETYLSALICYLIC ACID", signal: "Hemolytic anemia with G6PD deficiency", category: "Genomic variation", outcome: "Ongoing evaluation" },
-            { productName: "ZYLORIC", activeSubstance: "ALLOPURINOL", signal: "Generalised Exanthematous Pustulosis", category: "New active substance", outcome: "Update product information" },
-            { productName: "EPICOGEL SUSPENSION", activeSubstance: "ALUMINIUM HYDROXIDE DRIED, MAGNESIUM HYDROXIDE, DIMETHICONE", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "MOXAL", activeSubstance: "ALUMINUM HYDROXIDE, MAGNESIUM HYDROXIDE", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "MUCOSOLVAN", activeSubstance: "AMBROXOL HYDROCHLORIDE", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "RYBREVANT", activeSubstance: "AMIVANTAMAB", signal: "Anemia", category: "New biological/biosimilar product", outcome: "Keep the signal under monitoring" },
-            { productName: "RYBREVANT", activeSubstance: "AMIVANTAMAB", signal: "Thrombocytopenia", category: "New biological/biosimilar product", outcome: "Keep the signal under monitoring" },
-            { productName: "RYBREVANT", activeSubstance: "AMIVANTAMAB", signal: "Death", category: "New biological/biosimilar product", outcome: "Update product information" },
-            { productName: "AMLOR", activeSubstance: "AMLODIPINE", signal: "Glaucoma", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "KLAVOX", activeSubstance: "AMOXICILLIN, CLAVULANIC ACID", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "ANDEXXA", activeSubstance: "ANDEXANET ALFA", signal: "Thrombotic Events", category: "New active substance", outcome: "Request Direct Healthcare Professional Communication" },
-            { productName: "ERLEADA", activeSubstance: "APALUTAMIDE", signal: "Atrial Fibrillation", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "ERLEADA", activeSubstance: "APALUTAMIDE", signal: "Cognitive disorder", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "ERLEADA", activeSubstance: "APALUTAMIDE", signal: "Depression", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "ERLEADA", activeSubstance: "APALUTAMIDE", signal: "Dizziness", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "ERLEADA", activeSubstance: "APALUTAMIDE", signal: "Mental impairment", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "ERLEADA", activeSubstance: "APALUTAMIDE", signal: "Neutropenia", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "ARIGAL", activeSubstance: "ARGATROBAN", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "ARPENIA", activeSubstance: "ARIPIPRAZOLE", signal: "Weight gain due to CYP2D6 polymorphism", category: "Genomic variation", outcome: "Keep the signal under monitoring" },
-            { productName: "ARPENIA", activeSubstance: "ARIPIPRAZOLE", signal: "Parkinsonism due to CYP2D6 polymorphism", category: "Genomic variation", outcome: "Keep the signal under monitoring" },
-            { productName: "ORABLOC", activeSubstance: "ARTICAINE+ EPINEPHRINE BITARTRATE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "CEVITIL", activeSubstance: "ASCORBIC ACID (VITAMIN C)", signal: "Hemolysis with G6PD deficiency", category: "Genomic variation", outcome: "Request signal evaluation report from MAH" },
-            { productName: "TECENTRIQ", activeSubstance: "ATEZOLIZUMAB", signal: "TB reactivation", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "TECENTRIQ", activeSubstance: "ATEZOLIZUMAB", signal: "Decreased blood testosterone", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "TECENTRIQ", activeSubstance: "ATEZOLIZUMAB", signal: "Myocarditis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "TECENTRIQ", activeSubstance: "ATEZOLIZUMAB", signal: "Myositis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "TECENTRIQ", activeSubstance: "ATEZOLIZUMAB", signal: "Myasthenia Gravis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "AQUIPTA", activeSubstance: "ATOGEPANT", signal: "Alopecia", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "NEXVIAZYME", activeSubstance: "AVALGLUCOSIDASE ALFA", signal: "Nasopharyngitis", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "NEXVIAZYME", activeSubstance: "AVALGLUCOSIDASE ALFA", signal: "Bronchospasm", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "VANTRA", activeSubstance: "AVANAFIL", signal: "Malignant melanoma", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "BAVENCIO", activeSubstance: "AVELUMAB", signal: "TB reactivation", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "BAVENCIO", activeSubstance: "AVELUMAB", signal: "Decreased blood testosterone", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "BAVENCIO", activeSubstance: "AVELUMAB", signal: "Myocarditis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "BAVENCIO", activeSubstance: "AVELUMAB", signal: "Myositis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "BAVENCIO", activeSubstance: "AVELUMAB", signal: "Myasthenia Gravis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "CARVYKTI", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Cytomegalovirus infection reactivation", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Cytomegalovirus infection reactivation", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "KYMRIAH", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Cytomegalovirus infection reactivation", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "KYMRIAH", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Guillain-Barre syndrome", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "CARVYKTI", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Guillain-Barre syndrome", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Guillain-Barre syndrome", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Optic neuropathy / neuritis", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "KYMRIAH", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Optic neuropathy / neuritis", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "CARVYKTI", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Optic neuropathy / neuritis", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Tuberculosis infection", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "KYMRIAH", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Tuberculosis infection", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "CARVYKTI", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Tuberculosis infection", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Tumour pseudoprogression", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "KYMRIAH", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Tumour pseudoprogression", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "CARVYKTI", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Tumour pseudoprogression", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "T-cell malignancies", category: "Advanced therapy", outcome: "Request signal evaluation report from MAH" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Gastric perforation / ulcers", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Myocardial infarction", category: "Advanced therapy", outcome: "Request signal evaluation report from MAH" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Pancreatitis", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Myocarditis", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Trypanosoma Cruzi infection/reactivation", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "YESCARTA", activeSubstance: "AXICABTAGENE CILOLEUCEL", signal: "Adrenal insufficiency", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "REZUROCK", activeSubstance: "BELUMOSUDIL", signal: "Cataract", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "REZUROCK", activeSubstance: "BELUMOSUDIL", signal: "Death", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "REZUROCK", activeSubstance: "BELUMOSUDIL", signal: "Pancreatitis", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "WELIREG", activeSubstance: "BELZUTIFAN", signal: "Pneumonia", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "WELIREG", activeSubstance: "BELZUTIFAN", signal: "Hypotension", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "ENSUTINE", activeSubstance: "BENDAMUSTINE", signal: "QT prolongation", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "AVASTIN", activeSubstance: "BEVACIZUMAB", signal: "Tumor lysis syndrome", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "CLAMUDEX", activeSubstance: "BICALUTAMIDE", signal: "QT prolongation", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "MEKTOVI", activeSubstance: "BINIMETINIB", signal: "Toxic epidermal necrolysis", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "MEKTOVI", activeSubstance: "BINIMETINIB", signal: "Hepatitis", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "TECARTUS", activeSubstance: "BREXUCABTAGENE AUTOLEUCEL", signal: "Cytomegalovirus infection reactivation", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "TECARTUS", activeSubstance: "BREXUCABTAGENE AUTOLEUCEL", signal: "Guillain-Barre syndrome", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "TECARTUS", activeSubstance: "BREXUCABTAGENE AUTOLEUCEL", signal: "Optic neuropathy / neuritis", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "TECARTUS", activeSubstance: "BREXUCABTAGENE AUTOLEUCEL", signal: "Tuberculosis infection", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "TECARTUS", activeSubstance: "BREXUCABTAGENE AUTOLEUCEL", signal: "Tumour pseudoprogression", category: "Advanced therapy", outcome: "Ongoing evaluation" },
-            { productName: "CABOMETYX", activeSubstance: "CABOZANTINIB", signal: "Tumor lysis syndrome", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "INVOKANA", activeSubstance: "CANAGLIFLOZIN", signal: "Lower limb amputation", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "TEGRETOL", activeSubstance: "CARBAMEZEPINE", signal: "Termination of pregnancy", category: "Safety in special population", outcome: "Keep the signal under monitoring" },
-            { productName: "TRIAXONE", activeSubstance: "CEFTRIAXONE", signal: "Serious Hypersensitivity Reactions in Sickle Cell Anemia", category: "Safety in special population", outcome: "Keep the signal under monitoring" },
-            { productName: "CELEBREX", activeSubstance: "CELECOXIB", signal: "Gastric bleeding due to CYP2C19 polymorphism", category: "Genomic variation", outcome: "Keep the signal under monitoring" },
-            { productName: "ZYRTEC 0.1% ORAL SOLN", activeSubstance: "CETIRIZINE HYDROCHLORIDE", signal: "Cardiac Arrest", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "ZYRTEC 0.1% ORAL SOLN", activeSubstance: "CETIRIZINE HYDROCHLORIDE", signal: "Death", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "ZYRTEC 0.1% ORAL SOLN", activeSubstance: "CETIRIZINE HYDROCHLORIDE", signal: "Respiratory Depression", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "CHLORAMPHENICOL", activeSubstance: "CHLORAMPHENICOL", signal: "Hemolysis with G6PD deficiency", category: "Genomic variation", outcome: "Ongoing evaluation" },
-            { productName: "CHLOROQUINE", activeSubstance: "CHLOROQUINE", signal: "Methaemoglobinaemia with G6PD deficiency", category: "Genomic variation", outcome: "Keep the signal under monitoring" },
-            { productName: "CARVYKTI", activeSubstance: "CILTACABTAGENE AUTOLEUCEL", signal: "T-cell malignancies", category: "Advanced therapy", outcome: "Update product information" },
-            { productName: "CARVYKTI", activeSubstance: "CILTACABTAGENE AUTOLEUCEL", signal: "Gastric perforation / ulcers", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "CARVYKTI", activeSubstance: "CILTACABTAGENE AUTOLEUCEL", signal: "Myocardial infarction", category: "Advanced therapy", outcome: "Update product information" },
-            { productName: "CARVYKTI", activeSubstance: "CILTACABTAGENE AUTOLEUCEL", signal: "Pancreatitis", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "CARVYKTI", activeSubstance: "CILTACABTAGENE AUTOLEUCEL", signal: "Myocarditis", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "CARVYKTI", activeSubstance: "CILTACABTAGENE AUTOLEUCEL", signal: "Trypanosoma Cruzi infection/reactivation", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "CARVYKTI", activeSubstance: "CILTACABTAGENE AUTOLEUCEL", signal: "Adrenal insufficiency", category: "Advanced therapy", outcome: "Keep the signal under monitoring" },
-            { productName: "CIPROBAY", activeSubstance: "CIPROFLOXACIN", signal: "haemolytic anaemia with G6PD deficiency", category: "Genomic variation", outcome: "Ongoing evaluation" },
-            { productName: "KLACID", activeSubstance: "CLARITHROMYCIN", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "ANAFRANIL", activeSubstance: "CLOMIPRAMINE", signal: "Fatigue due to CYP2C19 polymorphism", category: "Genomic variation", outcome: "Keep the signal under monitoring" },
-            { productName: "TAFINLAR", activeSubstance: "DABRAFENIB", signal: "QT prolongation", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "FORXIGA", activeSubstance: "DAPAGLIFLOZIN", signal: "Lower limb amputation", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "AERIUS 2.5 MG-5ML SYRUP", activeSubstance: "DESLORATADINE", signal: "Cardiac Arrest", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "AERIUS 2.5 MG-5ML SYRUP", activeSubstance: "DESLORATADINE", signal: "Death", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "AERIUS", activeSubstance: "DESLORATADINE", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "AERIUS 2.5 MG-5ML SYRUP", activeSubstance: "DESLORATADINE", signal: "Respiratory Depression", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "SOTYKTU", activeSubstance: "DEUCRAVACITINIB", signal: "Diarrhea", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "SOTYKTU", activeSubstance: "DEUCRAVACITINIB", signal: "Headache", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "SOTYKTU", activeSubstance: "DEUCRAVACITINIB", signal: "Nausea", category: "NCE", outcome: "Ongoing evaluation" },
-            { productName: "OZURDEX", activeSubstance: "DEXAMETHASONE", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "ADRIXA", activeSubstance: "DEXAMETHASONE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "LANOXIN", activeSubstance: "DIGOXIN", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "TILDIEM", activeSubstance: "DILTIAZEM", signal: "Glaucoma", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "DILZEM", activeSubstance: "DILTIAZEM HYDROCHLORIDE", signal: "QT prolongation", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "FENISTIL DROPS 0.1G-100ML", activeSubstance: "DIMETHINDENE MALEATE", signal: "Cardiac Arrest", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "FENISTIL DROPS 0.1G-100ML", activeSubstance: "DIMETHINDENE MALEATE", signal: "Death", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "FENISTIL DROPS 0.1G-100ML", activeSubstance: "DIMETHINDENE MALEATE", signal: "Respiratory Depression", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "PHLEBODIA", activeSubstance: "DIOSMIN", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "EXYLIN", activeSubstance: "DIPHENHYDRAMINE", signal: "Hemolytic anemia with G6PD deficiency", category: "Genomic variation", outcome: "Ongoing evaluation" },
-            { productName: "AMYDRAMINE", activeSubstance: "DIPHENHYDRAMINE HYDROCHLORIDE", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "DRAMYLIN PEDIATRIC", activeSubstance: "DIPHENHYDRAMINE HYDROCHLORIDE, SODIUM CITRATE, MENTHOL", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "DOBUTAMINE HCL", activeSubstance: "DOBUTAMINE", signal: "QT prolongation", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "MOTILIUM", activeSubstance: "DOMPERIDONE", signal: "Lack of efficacy in adults", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "MOTILIUM", activeSubstance: "DOMPERIDONE", signal: "Lack of efficacy in pediatrics", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "DOMPY", activeSubstance: "DOMPERIDONE", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "MOTILIUM", activeSubstance: "DOMPERIDONE", signal: "QT prolongation in adults", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "MOTILIUM", activeSubstance: "DOMPERIDONE", signal: "QT prolongation in pediatrics", category: "New active substance", outcome: "Safety Communication" },
-            { productName: "MOTILIUM", activeSubstance: "DOMPERIDONE", signal: "Sudden cardiac death in adults", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "MOTILIUM", activeSubstance: "DOMPERIDONE", signal: "Sudden cardiac death in pediatrics", category: "New active substance", outcome: "Safety Communication" },
-            { productName: "POLIZA", activeSubstance: "DONEPEZIL HYDROCHLORIDE", signal: "QT prolongation", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "DOPAMIN HCL", activeSubstance: "DOPAMINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "JEMPERLI", activeSubstance: "DOSTARLIMAB", signal: "Neutropenia", category: "Biological", outcome: "Ongoing evaluation" },
-            { productName: "JEMPERLI", activeSubstance: "DOSTARLIMAB", signal: "Psoriasis", category: "Biological", outcome: "Ongoing evaluation" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Acute Pancreatitis", category: "Potential Class effect", outcome: "Request risk minimization measures" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Death", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Diabetic Ketoacidosis", category: "Potential Class effect", outcome: "Ongoing evaluation" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Interstitial nephritis", category: "Potential Class effect", outcome: "Ongoing evaluation" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Muscle atrophy", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Nephrolithiasis/Kidney stones", category: "Potential Class effect", outcome: "Ongoing evaluation" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Osteopenia/osteoporosis", category: "Potential Class effect", outcome: "Ongoing evaluation" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Gastroparesis", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Alopecia", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Depression/altered mood", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Suicidal ideation/altered mood", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "TRULICITY", activeSubstance: "DULAGLUTIDE", signal: "Nonarteritic Anterior Ischemic Optic Neuropathy (NAION)", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "IMFINZI", activeSubstance: "DURVALUMAB", signal: "TB reactivation", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "IMFINZI", activeSubstance: "DURVALUMAB", signal: "Decreased blood testosterone", category: "Potential Class effect", outcome: "Request signal evaluation report from MAH" },
-            { productName: "IMFINZI", activeSubstance: "DURVALUMAB", signal: "Myocarditis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "IMFINZI", activeSubstance: "DURVALUMAB", signal: "Myositis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "IMFINZI", activeSubstance: "DURVALUMAB", signal: "Myasthenia Gravis", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "GALCANEZUMAB", activeSubstance: "EMGALITY", signal: "Raynaud’s Phenomenon", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "JARDIANCE", activeSubstance: "EMPAGLIFLOZIN", signal: "Lower limb amputation", category: "Potential Class effect", outcome: "Keep the signal under monitoring" },
-            { productName: "BRAFTOVI", activeSubstance: "ENCORAFENIB", signal: "Cognitive disorders", category: "New active substance", outcome: "Request signal evaluation report from MAH" },
-            { productName: "BRAFTOVI", activeSubstance: "ENCORAFENIB", signal: "Death", category: "New active substance", outcome: "Ongoing evaluation" },
-            { productName: "BRAFTOVI", activeSubstance: "ENCORAFENIB", signal: "Depression", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "BRAFTOVI", activeSubstance: "ENCORAFENIB", signal: "Hypertension", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "BRAFTOVI", activeSubstance: "ENCORAFENIB", signal: "Neutropenia", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "BRAFTOVI", activeSubstance: "ENCORAFENIB", signal: "Thrombocytopenia", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "BRAFTOVI", activeSubstance: "ENCORAFENIB", signal: "Tumor lysis syndrome", category: "New active substance", outcome: "Keep the signal under monitoring" },
-            { productName: "ERENY", activeSubstance: "ENOXAPARIN SODIUM", signal: "Propylene glycol safety during pregnancy and in neonates", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "EPCLUSA", activeSubstance: "EPCLUSA", signal: "QT prolongation", category: "Safety in special population", outcome: "Ongoing evaluation" },
-            { productName: "EPINEPHRINE", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "EPIPEN", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "EPIPEN JR", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "EPIPEN 0.3MG", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "EPIPEN JR 0.15MG", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "EPINEPHRINE INJECTION", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "EPINEPHRINE INJECTION AUTO-INJECTOR", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "EPINEPHRINE INJECTION AUTO-INJECTOR 0.3MG", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" },
-            { productName: "EPINEPHRINE INJECTION AUTO-INJECTOR 0.15MG", activeSubstance: "EPINEPHRINE", signal: "Sulfite allergy", category: "Safety in special population", outcome: "Update product information" }
-            // Add more records as needed from the original list
-        ];
+          {/* Displaying the data table with sortable headers */}
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-gray-200">
+                  {['Product Name', 'Active Substance', 'Potential Safety Signal', 'Reason to be Reviewed Category', 'Review outcome'].map(key => (
+                    <th
+                      key={key}
+                      className="p-2 border cursor-pointer hover:bg-gray-300"
+                      onClick={() => handleSort(key)}
+                    >
+                      {key} {sortConfig.key === key ? (sortConfig.direction === 'asc' ? '↑' : '↓') : ''}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {filteredData.map((row, index) => (
+                  <tr key={index} className={index % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                    <td className="p-2 border">{row["Product Name"]}</td>
+                    <td className="p-2 border">{row["Active Substance"]}</td>
+                    <td className="p-2 border">{row["Potential Safety Signal"]}</td>
+                    <td className="p-2 border">{row["Reason to be Reviewed Category"]}</td>
+                    <td className="p-2 border">{row["Review outcome"]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      );
+    };
 
-        // DOM Elements
-        const dataTable = document.getElementById('data-table');
-        const userDisplay = document.getElementById('user-info');
-        const addRecordForm = document.getElementById('add-record-form');
-        const docIdInput = document.getElementById('doc-id');
-        const addRecordBtn = document.getElementById('add-btn');
-        const cancelBtn = document.getElementById('cancel-btn');
-        const exportBtn = document.getElementById('export-btn');
-        const messageContainer = document.getElementById('message-container');
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const filters = {
-            product: document.getElementById('filter-product'),
-            substance: document.getElementById('filter-substance'),
-            signal: document.getElementById('filter-signal'),
-            category: document.getElementById('filter-category'),
-            outcome: document.getElementById('filter-outcome')
-        };
-        const clearFiltersBtn = document.getElementById('clear-filters-btn');
-        const tableHeaders = document.querySelectorAll('.sortable');
-
-        let allRecords = [...staticDatabase];
-        let sortColumn = null;
-        let sortDirection = 'asc';
-
-        // Functions
-        function showMessage(message, type = 'info') {
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `p-3 mb-2 rounded-md text-white ${type === 'error' ? 'bg-red-500' : 'bg-blue-500'}`;
-            msgDiv.textContent = message;
-            messageContainer.appendChild(msgDiv);
-            setTimeout(() => msgDiv.remove(), 5000);
-        }
-
-        function populateFilters() {
-            const uniqueValues = {
-                product: new Set(),
-                substance: new Set(),
-                signal: new Set(),
-                category: new Set(),
-                outcome: new Set()
-            };
-            allRecords.forEach(record => {
-                uniqueValues.product.add(record.productName);
-                uniqueValues.substance.add(record.activeSubstance);
-                uniqueValues.signal.add(record.signal);
-                uniqueValues.category.add(record.category);
-                uniqueValues.outcome.add(record.outcome);
-            });
-            Object.keys(filters).forEach(key => {
-                filters[key].innerHTML = '<option value="">All</option>';
-                Array.from(uniqueValues[key]).sort().forEach(value => {
-                    const option = document.createElement('option');
-                    option.value = value;
-                    option.textContent = value;
-                    filters[key].appendChild(option);
-                });
-            });
-        }
-
-        function renderTable(records) {
-            dataTable.innerHTML = '';
-            records.forEach((record, index) => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td class="px-4 py-2 whitespace-nowrap">${record.productName}</td>
-                    <td class="px-4 py-2 whitespace-nowrap">${record.activeSubstance}</td>
-                    <td class="px-4 py-2 whitespace-nowrap">${record.signal}</td>
-                    <td class="px-4 py-2 whitespace-nowrap">${record.category}</td>
-                    <td class="px-4 py-2 whitespace-nowrap">${record.outcome}</td>
-                    <td class="px-4 py-2 whitespace-nowrap">Log entry ${index + 1}</td>
-                    <td class="px-4 py-2 whitespace-nowrap">
-                        <button class="edit-btn text-blue-600 hover:text-blue-800 mr-2" data-index="${index}">Edit</button>
-                        <button class="delete-btn text-red-600 hover:text-red-800" data-index="${index}">Delete</button>
-                    </td>
-                `;
-                dataTable.appendChild(row);
-            });
-        }
-
-        function applyFilters() {
-            let filteredRecords = [...staticDatabase];
-            Object.keys(filters).forEach(key => {
-                const value = filters[key].value;
-                if (value) {
-                    filteredRecords = filteredRecords.filter(record => record[key] === value);
-                }
-            });
-            if (sortColumn) {
-                filteredRecords.sort((a, b) => {
-                    const aValue = a[sortColumn];
-                    const bValue = b[sortColumn];
-                    return sortDirection === 'asc' ? aValue.localeCompare(bValue) : bValue.localeCompare(aValue);
-                });
-            }
-            renderTable(filteredRecords);
-        }
-
-        function sortTable(column) {
-            if (sortColumn === column) {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                sortColumn = column;
-                sortDirection = 'asc';
-            }
-            applyFilters();
-        }
-
-        // Event Listeners
-        addRecordForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const newRecord = {
-                productName: document.getElementById('new-product').value,
-                activeSubstance: document.getElementById('new-substance').value,
-                signal: document.getElementById('new-signal').value,
-                category: document.getElementById('new-category').value,
-                outcome: document.getElementById('new-outcome').value
-            };
-            if (docIdInput.value) {
-                const index = parseInt(docIdInput.value);
-                staticDatabase[index] = newRecord;
-                showMessage('Record updated successfully');
-            } else {
-                staticDatabase.push(newRecord);
-                showMessage('Record added successfully');
-            }
-            allRecords = [...staticDatabase];
-            applyFilters();
-            addRecordForm.reset();
-            docIdInput.value = '';
-            addRecordBtn.textContent = 'Add Record';
-            cancelBtn.classList.add('hidden');
-        });
-
-        cancelBtn.addEventListener('click', () => {
-            addRecordForm.reset();
-            docIdInput.value = '';
-            addRecordBtn.textContent = 'Add Record';
-            cancelBtn.classList.add('hidden');
-        });
-
-        dataTable.addEventListener('click', (e) => {
-            if (e.target.classList.contains('edit-btn')) {
-                const index = parseInt(e.target.dataset.index);
-                const record = staticDatabase[index];
-                document.getElementById('new-product').value = record.productName;
-                document.getElementById('new-substance').value = record.activeSubstance;
-                document.getElementById('new-signal').value = record.signal;
-                document.getElementById('new-category').value = record.category;
-                document.getElementById('new-outcome').value = record.outcome;
-                docIdInput.value = index;
-                addRecordBtn.textContent = 'Update Record';
-                cancelBtn.classList.remove('hidden');
-            } else if (e.target.classList.contains('delete-btn')) {
-                const index = parseInt(e.target.dataset.index);
-                if (confirm('Are you sure you want to delete this record?')) {
-                    staticDatabase.splice(index, 1);
-                    allRecords = [...staticDatabase];
-                    applyFilters();
-                    showMessage('Record deleted successfully', 'error');
-                }
-            }
-        });
-
-        exportBtn.addEventListener('click', () => {
-            const csv = allRecords.map(record =>
-                `${record.productName},${record.activeSubstance},${record.signal},${record.category},${record.outcome}`
-            ).join('\n');
-            const blob = new Blob([`Product Name,Active Substance,Safety Signal,Category,Outcome\n${csv}`], { type: 'text/csv' });
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = 'safety_signals_export.csv';
-            a.click();
-            window.URL.revokeObjectURL(url);
-            showMessage('Data exported successfully');
-        });
-
-        clearFiltersBtn.addEventListener('click', () => {
-            Object.values(filters).forEach(select => select.value = '');
-            applyFilters();
-        });
-
-        tableHeaders.forEach(header => {
-            header.addEventListener('click', () => sortTable(header.dataset.sort));
-        });
-
-        Object.values(filters).forEach(select => {
-            select.addEventListener('change', applyFilters);
-        });
-
-        // Initialize
-        populateFilters();
-        renderTable(allRecords);
-    </script>
+    // Rendering the App component
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
